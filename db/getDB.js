@@ -7,7 +7,7 @@ var password = encodeURIComponent("wenxu");
 var clusterUrl = "127.0.0.1:27017";
 var authMechanism = "DEFAULT";
 // Replace the following with your MongoDB deployment's connection string.
-var uri = "mongodb://" + username + ":" + password + "@" + clusterUrl + "/?authMechanism=" + authMechanism + "&authSource=test";
+var uri = "mongodb://" + username + ":" + password + "@" + clusterUrl + "/?authMechanism=" + authMechanism + "&authSource=whatHappened";
 // Create a new MongoClient
 var client = new mongodb_1.MongoClient(uri);
 var connection;
@@ -15,7 +15,7 @@ var connection;
 function default_1() {
     if (!connection) {
         connection = client.connect().then(function () {
-            return client.db("test");
+            return client.db("whatHappened");
         });
     }
     return connection;

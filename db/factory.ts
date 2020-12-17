@@ -7,8 +7,8 @@ export default function <T>(collection: string) {
       c.insertOne(data);
     },
 
-    async getAll(): Promise<T[]> {
-      return (await getDB()).collection("user").find({}).toArray();
+    async find(of: Partial<T>) {
+      return (await getDB()).collection(collection).find(of).toArray();
     },
   };
 }
