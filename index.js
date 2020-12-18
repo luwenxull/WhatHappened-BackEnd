@@ -28,10 +28,15 @@ app.post("/user", async (req, res) => {
   if (length) {
     res.status(409).send({ message: "The username is already in use" });
   } else {
-    user.create({
-      username,
-      password,
-    });
+    user
+      .create({
+        username,
+        password,
+        filePath: String(Math.random()).slice(2),
+      })
+      .then(() => {
+        res.send({ message: "User created successfully" });
+      });
   }
 });
 
@@ -46,5 +51,28 @@ app.post("/login", async (req, res) => {
     }
   } else {
     res.status(403).send({ message: "The user was not found" });
+  }
+});
+
+app.get("/json", async (req, res) => {
+  const { username } = req.body;
+  const [user] = await user.find({ username });
+  if (user) {
+    fs.readFile();
+  }
+});
+
+app.post("/json", async (req, res) => {
+  const { username, json } = req.body;
+  const [_user] = await user.find({ username });
+  if (_user) {
+    fs.writeFile(`json/${_user.filePath}`, json, (err) => {
+      if (err) {
+        console.log(err);
+        res.status(500).send({ message: "Can't save file" });
+      } else {
+        res.send({ message: "File saved" });
+      }
+    });
   }
 });
