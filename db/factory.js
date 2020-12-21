@@ -40,28 +40,35 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 var getDB_1 = __importDefault(require("./getDB"));
+function emptyModifier(from) {
+    return from;
+}
 function default_1(collection) {
     return {
-        create: function (data) {
+        create: function (data, modifier) {
+            if (modifier === void 0) { modifier = emptyModifier; }
             return __awaiter(this, void 0, void 0, function () {
                 var c;
                 return __generator(this, function (_a) {
                     switch (_a.label) {
                         case 0: return [4 /*yield*/, getDB_1.default()];
                         case 1:
-                            c = (_a.sent()).collection(collection);
-                            c.insertOne(data);
-                            return [2 /*return*/];
+                            c = (_a.sent()).collection(modifier(collection));
+                            return [2 /*return*/, c.insertOne(data)];
                     }
                 });
             });
         },
-        getAll: function () {
+        find: function (of, modifier) {
+            if (modifier === void 0) { modifier = emptyModifier; }
             return __awaiter(this, void 0, void 0, function () {
                 return __generator(this, function (_a) {
                     switch (_a.label) {
                         case 0: return [4 /*yield*/, getDB_1.default()];
-                        case 1: return [2 /*return*/, (_a.sent()).collection("user").find({}).toArray()];
+                        case 1: return [2 /*return*/, (_a.sent())
+                                .collection(modifier(collection))
+                                .find(of)
+                                .toArray()];
                     }
                 });
             });
