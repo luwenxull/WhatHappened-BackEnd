@@ -8,7 +8,7 @@ export default function <T>(collection: string) {
   return {
     async create(data: T, modifier: (from: string) => string = emptyModifier) {
       const c = (await getDB()).collection<T>(modifier(collection));
-      return c.insertOne(data as any);
+      return c.insertOne(data as any).then((_) => _.ops[0]);
     },
 
     async find(

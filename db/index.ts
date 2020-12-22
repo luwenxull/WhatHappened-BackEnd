@@ -1,6 +1,10 @@
 import factory from "./factory";
 
-interface User {
+interface DBDocument {
+  _id?: string;
+}
+
+interface User extends DBDocument {
   username: string;
   password: string;
   filePath: string;
@@ -8,12 +12,13 @@ interface User {
 
 export const user = factory<User>("user");
 
-interface Time {
+interface Time extends DBDocument {
   date: number;
   description: string;
+  groupID: string;
 }
 
-interface Group {
+interface Group extends DBDocument {
   uuid: string;
   name: String;
   emotion: 0 | 1;
@@ -21,3 +26,5 @@ interface Group {
 }
 
 export const group = factory<Group>("group");
+
+export const groupTime = factory<Time>("groupTime");

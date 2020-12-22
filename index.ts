@@ -12,6 +12,14 @@ app.use(function (req, res, next) {
   next();
 });
 
+function usernameModifier(username: string | undefined) {
+  return function (_: string) {
+    return `${username}_${_}`;
+  };
+}
+
+let unm = usernameModifier;
+
 function handle<T>(p: Promise<T>, res: Response, message: String = "") {
   p.then((_) => {
     // console.log(_);
@@ -75,31 +83,12 @@ app.post("/login", async (req, res) => {
   }
 });
 
-// app.post("/data", async (req, res) => {
-//   const { data } = req.body;
-//   const [user] = await db.user.find({ username });
-//   if (user) {
-//     fs.writeFile(`json/${user.filePath}`, data, (err) => {
-//       if (err) {
-//         console.log(err);
-//         res.status(500).send({ message: "Failed to save file" });
-//       } else {
-//         res.send({ message: "File saved successfully" });
-//       }
-//     });
-//   }
-// });
-
 // 分组
 app.get("/group", async (req, res) => {
   const username = req.header("username");
   const group = req.body;
   if (await checkIfUserExist(username)) {
-    handle(
-      db.group.find(group, (_) => `${username}_${_}`),
-      res,
-      "Failed to find group"
-    );
+    handle(db.group.find(group, unm(username)), res, "Failed to find group");
   }
 });
 
@@ -108,21 +97,69 @@ app.post("/group", async (req, res) => {
   const group = req.body;
   if (await checkIfUserExist(username)) {
     handle(
-      db.group.create(group, (_) => `${username}_${_}`),
+      db.group.create(group, unm(username)),
       res,
       "Failed to create group"
     );
   }
 });
 
-app.delete("/group", async (req, res) => {
+app.delete("/group/:groupID", async (req, res) => {
   const username = req.header("username");
-  const group = req.body;
+  const groupID = req.params.groupID;
   if (await checkIfUserExist(username)) {
     handle(
-      db.group.remove(group, (_) => `${username}_${_}`),
+      db.group.remove({ uuid: groupID }, unm(username)).then((_) => {
+        return db.groupTime.remove({ groupID }, unm(username));
+      }),
       res,
       "Failed to remove group"
+    );
+  }
+});
+
+// 记录
+app.get("/group/:groupID/time", async (req, res) => {
+  const username = req.header("username");
+  const groupID = req.params.groupID;
+  // const time = req.body;
+  if (await checkIfUserExist(username)) {
+    handle(
+      db.groupTime.find({ groupID }, unm(username)),
+      res,
+      "Failed to find group time"
+    );
+  }
+});
+
+app.post("/group/:groupID/time", async (req, res) => {
+  const username = req.header("username");
+  const groupID = req.params.groupID;
+  const time = req.body;
+  if (await checkIfUserExist(username)) {
+    handle(
+      db.groupTime.create(
+        {
+          ...time,
+          groupID,
+        },
+        unm(username)
+      ),
+      res,
+      "Failed to create group time"
+    );
+  }
+});
+
+app.delete("/group/time/:timeID", async (req, res) => {
+  const username = req.header("username");
+  const timeID = req.params.timeID;
+  const time = req.body;
+  if (await checkIfUserExist(username)) {
+    handle(
+      db.groupTime.remove({}, unm(username)),
+      res,
+      "Failed to remove group time"
     );
   }
 });
