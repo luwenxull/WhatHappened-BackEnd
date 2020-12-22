@@ -2,7 +2,8 @@ import { Db, MongoClient } from "mongodb";
 
 // Replace the following with values for your environment.
 const username = encodeURIComponent("wenxu");
-const password = encodeURIComponent("wenxu");
+const password = encodeURIComponent(process.env.MONGO_PWD as string);
+console.log("use password: ", process.env.MONGO_PWD);
 const clusterUrl = "127.0.0.1:27017";
 
 const authMechanism = "DEFAULT";

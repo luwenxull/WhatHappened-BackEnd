@@ -27,5 +27,17 @@ export default function <T>(collection: string) {
     ) {
       return (await getDB()).collection<T>(modifier(collection)).deleteMany(of);
     },
+
+    async modify(
+      filter: Partial<T>,
+      doc: Partial<T>,
+      modifier: (from: string) => string = emptyModifier
+    ) {
+      return (await getDB())
+        .collection<T>(modifier(collection))
+        .updateOne(filter, {
+          $set: doc,
+        });
+    },
   };
 }

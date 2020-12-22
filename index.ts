@@ -45,10 +45,15 @@ const httpsServer = https.createServer(credentials, app);
 
 httpsServer.listen(port);
 
-async function checkIfUserExist(username?: string) {
+async function checkIfUserExist(username: string | undefined, res: Response) {
   if (typeof username === "undefined") return false;
   const users = await db.user.find({ username });
-  return users.length > 0;
+  if (users.length > 0) {
+    return true;
+  } else {
+    res.status(401).send({ message: "Can't find related user" });
+    return false;
+  }
 }
 
 app.post("/user", async (req, res) => {
@@ -87,7 +92,7 @@ app.post("/login", async (req, res) => {
 app.get("/group", async (req, res) => {
   const username = req.header("username");
   const group = req.body;
-  if (await checkIfUserExist(username)) {
+  if (await checkIfUserExist(username, res)) {
     handle(db.group.find(group, unm(username)), res, "Failed to find group");
   }
 });
@@ -95,7 +100,7 @@ app.get("/group", async (req, res) => {
 app.post("/group", async (req, res) => {
   const username = req.header("username");
   const group = req.body;
-  if (await checkIfUserExist(username)) {
+  if (await checkIfUserExist(username, res)) {
     handle(
       db.group.create(group, unm(username)),
       res,
@@ -104,10 +109,29 @@ app.post("/group", async (req, res) => {
   }
 });
 
+app.put("/group/:groupID", async (req, res) => {
+  const username = req.header("username");
+  const { groupID } = req.params;
+  const group = req.body;
+  if (await checkIfUserExist(username, res)) {
+    handle(
+      db.group.modify(
+        {
+          uuid: groupID,
+        },
+        group,
+        unm(username)
+      ),
+      res,
+      "Failed to create group"
+    );
+  }
+});
+
 app.delete("/group/:groupID", async (req, res) => {
   const username = req.header("username");
-  const groupID = req.params.groupID;
-  if (await checkIfUserExist(username)) {
+  const { groupID } = req.params;
+  if (await checkIfUserExist(username, res)) {
     handle(
       db.group.remove({ uuid: groupID }, unm(username)).then((_) => {
         return db.groupTime.remove({ groupID }, unm(username));
@@ -123,7 +147,7 @@ app.get("/group/:groupID/time", async (req, res) => {
   const username = req.header("username");
   const groupID = req.params.groupID;
   // const time = req.body;
-  if (await checkIfUserExist(username)) {
+  if (await checkIfUserExist(username, res)) {
     handle(
       db.groupTime.find({ groupID }, unm(username)),
       res,
@@ -136,7 +160,7 @@ app.post("/group/:groupID/time", async (req, res) => {
   const username = req.header("username");
   const groupID = req.params.groupID;
   const time = req.body;
-  if (await checkIfUserExist(username)) {
+  if (await checkIfUserExist(username, res)) {
     handle(
       db.groupTime.create(
         {
@@ -154,10 +178,10 @@ app.post("/group/:groupID/time", async (req, res) => {
 app.delete("/group/time/:timeID", async (req, res) => {
   const username = req.header("username");
   const timeID = req.params.timeID;
-  const time = req.body;
-  if (await checkIfUserExist(username)) {
+  // const time = req.body;
+  if (await checkIfUserExist(username, res)) {
     handle(
-      db.groupTime.remove({}, unm(username)),
+      db.groupTime.remove({ _id: timeID }, unm(username)),
       res,
       "Failed to remove group time"
     );
