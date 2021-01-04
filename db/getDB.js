@@ -3,7 +3,8 @@ Object.defineProperty(exports, "__esModule", { value: true });
 var mongodb_1 = require("mongodb");
 // Replace the following with values for your environment.
 var username = encodeURIComponent("wenxu");
-var password = encodeURIComponent("wenxu");
+var password = encodeURIComponent(process.env.MONGO_PWD);
+console.log("use password: ", process.env.MONGO_PWD);
 var clusterUrl = "127.0.0.1:27017";
 var authMechanism = "DEFAULT";
 // Replace the following with your MongoDB deployment's connection string.

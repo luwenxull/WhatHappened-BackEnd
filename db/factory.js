@@ -54,7 +54,7 @@ function default_1(collection) {
                         case 0: return [4 /*yield*/, getDB_1.default()];
                         case 1:
                             c = (_a.sent()).collection(modifier(collection));
-                            return [2 /*return*/, c.insertOne(data)];
+                            return [2 /*return*/, c.insertOne(data).then(function (_) { return _.ops[0]; })];
                     }
                 });
             });
@@ -69,6 +69,32 @@ function default_1(collection) {
                                 .collection(modifier(collection))
                                 .find(of)
                                 .toArray()];
+                    }
+                });
+            });
+        },
+        remove: function (of, modifier) {
+            if (modifier === void 0) { modifier = emptyModifier; }
+            return __awaiter(this, void 0, void 0, function () {
+                return __generator(this, function (_a) {
+                    switch (_a.label) {
+                        case 0: return [4 /*yield*/, getDB_1.default()];
+                        case 1: return [2 /*return*/, (_a.sent()).collection(modifier(collection)).deleteMany(of)];
+                    }
+                });
+            });
+        },
+        modify: function (filter, doc, modifier) {
+            if (modifier === void 0) { modifier = emptyModifier; }
+            return __awaiter(this, void 0, void 0, function () {
+                return __generator(this, function (_a) {
+                    switch (_a.label) {
+                        case 0: return [4 /*yield*/, getDB_1.default()];
+                        case 1: return [2 /*return*/, (_a.sent())
+                                .collection(modifier(collection))
+                                .updateOne(filter, {
+                                $set: doc,
+                            })];
                     }
                 });
             });

@@ -1,4 +1,15 @@
 "use strict";
+var __assign = (this && this.__assign) || function () {
+    __assign = Object.assign || function(t) {
+        for (var s, i = 1, n = arguments.length; i < n; i++) {
+            s = arguments[i];
+            for (var p in s) if (Object.prototype.hasOwnProperty.call(s, p))
+                t[p] = s[p];
+        }
+        return t;
+    };
+    return __assign.apply(this, arguments);
+};
 var __createBinding = (this && this.__createBinding) || (Object.create ? (function(o, m, k, k2) {
     if (k2 === undefined) k2 = k;
     Object.defineProperty(o, k2, { enumerable: true, get: function() { return m[k]; } });
@@ -58,6 +69,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+require("dotenv").config();
 var db = __importStar(require("./db"));
 var express_1 = __importDefault(require("express"));
 var fs_1 = __importDefault(require("fs"));
@@ -65,21 +77,51 @@ var https_1 = __importDefault(require("https"));
 var app = express_1.default();
 app.use(express_1.default.json()); // for parsing application/json
 app.use(express_1.default.urlencoded({ extended: true }));
+app.use(function (req, res, next) {
+    console.log(req.method, req.path, "At time:", new Date().toLocaleString());
+    next();
+});
+function usernameModifier(username) {
+    return function (_) {
+        return username + "_" + _;
+    };
+}
+var unm = usernameModifier;
+function handle(p, res, message) {
+    if (message === void 0) { message = ""; }
+    p.then(function (_) {
+        // console.log(_);
+        res.send({ message: "OK", data: _ });
+    }).catch(function (err) {
+        console.log(err);
+        res.status(500).send({ message: message });
+    });
+}
 var privateKey = fs_1.default.readFileSync("/root/.acme.sh/wxxfj.xyz/wxxfj.xyz.key", "utf8");
 var certificate = fs_1.default.readFileSync("/root/.acme.sh/wxxfj.xyz/wxxfj.xyz.cer", "utf8");
 var credentials = { key: privateKey, cert: certificate };
 var port = 3000;
 var httpsServer = https_1.default.createServer(credentials, app);
 httpsServer.listen(port);
-function checkIfUserExist(username) {
+function checkIfUserExist(username, res) {
     return __awaiter(this, void 0, void 0, function () {
         var users;
         return __generator(this, function (_a) {
             switch (_a.label) {
-                case 0: return [4 /*yield*/, db.user.find({ username: username })];
+                case 0:
+                    if (typeof username === "undefined")
+                        return [2 /*return*/, false];
+                    return [4 /*yield*/, db.user.find({ username: username })];
                 case 1:
                     users = _a.sent();
-                    return [2 /*return*/, users.length > 0];
+                    if (users.length > 0) {
+                        return [2 /*return*/, true];
+                    }
+                    else {
+                        res.status(401).send({ message: "Can't find related user" });
+                        return [2 /*return*/, false];
+                    }
+                    return [2 /*return*/];
             }
         });
     });
@@ -135,54 +177,123 @@ app.post("/login", function (req, res) { return __awaiter(void 0, void 0, void 0
         }
     });
 }); });
-app.post("/data", function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
-    var username, data, user;
+// 分组
+app.get("/group", function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
+    var username, group;
     return __generator(this, function (_a) {
         switch (_a.label) {
             case 0:
-                username = req.header("usernmae");
-                console.log(username);
-                data = req.body.data;
-                return [4 /*yield*/, db.user.find({ username: username })];
+                username = req.header("username");
+                group = req.body;
+                return [4 /*yield*/, checkIfUserExist(username, res)];
             case 1:
-                user = (_a.sent())[0];
-                if (user) {
-                    fs_1.default.writeFile("json/" + user.filePath, data, function (err) {
-                        if (err) {
-                            console.log(err);
-                            res.status(500).send({ message: "Can't save file" });
-                        }
-                        else {
-                            res.send({ message: "File saved successfully" });
-                        }
-                    });
+                if (_a.sent()) {
+                    handle(db.group.find(group, unm(username)), res, "Failed to find group");
                 }
                 return [2 /*return*/];
         }
     });
 }); });
-// 分组
 app.post("/group", function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
-    var _a, username, group, exist;
-    return __generator(this, function (_b) {
-        switch (_b.label) {
+    var username, group;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
             case 0:
-                _a = req.body, username = _a.username, group = _a.group;
-                return [4 /*yield*/, checkIfUserExist(username)];
+                username = req.header("username");
+                group = req.body;
+                return [4 /*yield*/, checkIfUserExist(username, res)];
             case 1:
-                exist = _b.sent();
-                if (exist) {
-                    db.group
-                        .create(group, function (_) { return username + "." + _; })
-                        .then(function (err) {
-                        if (err) {
-                            console.log(err);
-                            res.status(500).send({ message: "Can't save group" });
-                        }
-                        else {
-                            res.send({ message: "Group saved successfully" });
-                        }
-                    });
+                if (_a.sent()) {
+                    handle(db.group.create(group, unm(username)), res, "Failed to create group");
+                }
+                return [2 /*return*/];
+        }
+    });
+}); });
+app.put("/group/:groupID", function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
+    var username, groupID, group;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                username = req.header("username");
+                groupID = req.params.groupID;
+                group = req.body;
+                return [4 /*yield*/, checkIfUserExist(username, res)];
+            case 1:
+                if (_a.sent()) {
+                    handle(db.group.modify({
+                        uuid: groupID,
+                    }, group, unm(username)), res, "Failed to create group");
+                }
+                return [2 /*return*/];
+        }
+    });
+}); });
+app.delete("/group/:groupID", function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
+    var username, groupID;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                username = req.header("username");
+                groupID = req.params.groupID;
+                return [4 /*yield*/, checkIfUserExist(username, res)];
+            case 1:
+                if (_a.sent()) {
+                    handle(db.group.remove({ uuid: groupID }, unm(username)).then(function (_) {
+                        return db.groupTime.remove({ groupID: groupID }, unm(username));
+                    }), res, "Failed to remove group");
+                }
+                return [2 /*return*/];
+        }
+    });
+}); });
+// 记录
+app.get("/group/:groupID/time", function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
+    var username, groupID;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                username = req.header("username");
+                groupID = req.params.groupID;
+                return [4 /*yield*/, checkIfUserExist(username, res)];
+            case 1:
+                // const time = req.body;
+                if (_a.sent()) {
+                    handle(db.groupTime.find({ groupID: groupID }, unm(username)), res, "Failed to find group time");
+                }
+                return [2 /*return*/];
+        }
+    });
+}); });
+app.post("/group/:groupID/time", function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
+    var username, groupID, time;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                username = req.header("username");
+                groupID = req.params.groupID;
+                time = req.body;
+                return [4 /*yield*/, checkIfUserExist(username, res)];
+            case 1:
+                if (_a.sent()) {
+                    handle(db.groupTime.create(__assign(__assign({}, time), { groupID: groupID }), unm(username)), res, "Failed to create group time");
+                }
+                return [2 /*return*/];
+        }
+    });
+}); });
+app.delete("/group/time/:timeID", function (req, res) { return __awaiter(void 0, void 0, void 0, function () {
+    var username, timeID;
+    return __generator(this, function (_a) {
+        switch (_a.label) {
+            case 0:
+                username = req.header("username");
+                timeID = req.params.timeID;
+                return [4 /*yield*/, checkIfUserExist(username, res)];
+            case 1:
+                // const time = req.body;
+                if (_a.sent()) {
+                    handle(db.groupTime.remove({ _id: timeID }, unm(username)), res, "Failed to remove group time");
                 }
                 return [2 /*return*/];
         }

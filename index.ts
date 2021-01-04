@@ -1,14 +1,17 @@
-import * as db from "./db";
-import express, { Response } from "express";
-import fs from "fs";
-import https from "https";
+require('dotenv').config();
+
+import * as db from './db';
+import express, { Response } from 'express';
+import fs from 'fs';
+import https from 'https';
+
 const app = express();
 
 app.use(express.json()); // for parsing application/json
 app.use(express.urlencoded({ extended: true }));
 
 app.use(function (req, res, next) {
-  console.log(req.method, req.path, "At time:", new Date().toLocaleString());
+  console.log(req.method, req.path, 'At time:', new Date().toLocaleString());
   next();
 });
 
@@ -20,24 +23,17 @@ function usernameModifier(username: string | undefined) {
 
 let unm = usernameModifier;
 
-function handle<T>(p: Promise<T>, res: Response, message: String = "") {
+function handle<T>(p: Promise<T>, res: Response, message: String = '') {
   p.then((_) => {
-    // console.log(_);
-    res.send({ message: "OK", data: _ });
+    res.send({ message: 'OK', data: _ });
   }).catch((err) => {
     console.log(err);
     res.status(500).send({ message });
   });
 }
 
-const privateKey = fs.readFileSync(
-  "/root/.acme.sh/wxxfj.xyz/wxxfj.xyz.key",
-  "utf8"
-);
-const certificate = fs.readFileSync(
-  "/root/.acme.sh/wxxfj.xyz/wxxfj.xyz.cer",
-  "utf8"
-);
+const privateKey = fs.readFileSync('/root/.acme.sh/wxxfj.xyz/wxxfj.xyz.key', 'utf8');
+const certificate = fs.readFileSync('/root/.acme.sh/wxxfj.xyz/wxxfj.xyz.cer', 'utf8');
 const credentials = { key: privateKey, cert: certificate };
 const port = 3000;
 
@@ -46,7 +42,7 @@ const httpsServer = https.createServer(credentials, app);
 httpsServer.listen(port);
 
 async function checkIfUserExist(username: string | undefined, res: Response) {
-  if (typeof username === "undefined") return false;
+  if (typeof username === 'undefined') return false;
   const users = await db.user.find({ username });
   if (users.length > 0) {
     return true;
@@ -56,11 +52,11 @@ async function checkIfUserExist(username: string | undefined, res: Response) {
   }
 }
 
-app.post("/user", async (req, res) => {
+app.post('/user', async (req, res) => {
   const { username, password } = req.body;
   const { length } = await db.user.find({ username });
   if (length) {
-    res.status(409).send({ message: "The username is already in use" });
+    res.status(409).send({ message: '该用户名已被使用' });
   } else {
     db.user
       .create({
@@ -69,121 +65,100 @@ app.post("/user", async (req, res) => {
         filePath: String(Math.random()).slice(2),
       })
       .then(() => {
-        res.send({ message: "User created successfully" });
+        res.send({ message: 'User created successfully' });
       });
   }
 });
 
-app.post("/login", async (req, res) => {
+app.post('/login', async (req, res) => {
   const { username, password } = req.body;
   const users = await db.user.find({ username });
   if (users.length) {
     if (users[0].password === password) {
       res.sendStatus(200);
     } else {
-      res.status(403).send({ message: "Wrong password" });
+      res.status(401).send({ message: '密码错误' });
     }
   } else {
-    res.status(403).send({ message: "The user was not found" });
+    res.status(401).send({ message: '用户未找到' });
   }
 });
 
 // 分组
-app.get("/group", async (req, res) => {
-  const username = req.header("username");
-  const group = req.body;
+app.get('/event', async (req, res) => {
+  const username = req.header('username');
+  const event = req.body;
   if (await checkIfUserExist(username, res)) {
-    handle(db.group.find(group, unm(username)), res, "Failed to find group");
+    handle(db.event.find(event, unm(username)), res, '未找到对应事件');
   }
 });
 
-app.post("/group", async (req, res) => {
-  const username = req.header("username");
-  const group = req.body;
+app.post('/event', async (req, res) => {
+  const username = req.header('username');
+  const event = req.body;
   if (await checkIfUserExist(username, res)) {
-    handle(
-      db.group.create(group, unm(username)),
-      res,
-      "Failed to create group"
-    );
+    handle(db.event.create(event, unm(username)), res, '创建事件失败');
   }
 });
 
-app.put("/group/:groupID", async (req, res) => {
-  const username = req.header("username");
-  const { groupID } = req.params;
-  const group = req.body;
+app.put('/event/:eventID', async (req, res) => {
+  const username = req.header('username');
+  const { eventID } = req.params;
+  const event = req.body;
   if (await checkIfUserExist(username, res)) {
     handle(
-      db.group.modify(
+      db.event.modify(
         {
-          uuid: groupID,
+          uuid: eventID,
         },
-        group,
+        event,
         unm(username)
       ),
       res,
-      "Failed to create group"
+      '更新事件失败'
     );
   }
 });
 
-app.delete("/group/:groupID", async (req, res) => {
-  const username = req.header("username");
-  const { groupID } = req.params;
+app.delete('/event/:eventID', async (req, res) => {
+  const username = req.header('username');
+  const { eventID } = req.params;
   if (await checkIfUserExist(username, res)) {
-    handle(
-      db.group.remove({ uuid: groupID }, unm(username)).then((_) => {
-        return db.groupTime.remove({ groupID }, unm(username));
-      }),
-      res,
-      "Failed to remove group"
-    );
+    handle(db.event.remove({ uuid: eventID }, unm(username)), res, '移除事件失败');
   }
 });
 
-// 记录
-app.get("/group/:groupID/time", async (req, res) => {
-  const username = req.header("username");
-  const groupID = req.params.groupID;
-  // const time = req.body;
+app.post('/backup', async (req, res) => {
+  const username = req.header('username');
+  const events = req.body;
   if (await checkIfUserExist(username, res)) {
     handle(
-      db.groupTime.find({ groupID }, unm(username)),
-      res,
-      "Failed to find group time"
-    );
-  }
-});
-
-app.post("/group/:groupID/time", async (req, res) => {
-  const username = req.header("username");
-  const groupID = req.params.groupID;
-  const time = req.body;
-  if (await checkIfUserExist(username, res)) {
-    handle(
-      db.groupTime.create(
-        {
-          ...time,
-          groupID,
-        },
-        unm(username)
+      Promise.all(
+        events.map((event: any) => {
+          return db.event
+            .find(
+              {
+                uuid: event.uuid,
+              },
+              unm(username)
+            )
+            .then((_) => {
+              if (_.length) {
+                return db.event.modify(
+                  {
+                    uuid: event.uuid,
+                  },
+                  event,
+                  unm(username)
+                ) as any;
+              } else {
+                return db.event.create(event, unm(username)) as any;
+              }
+            });
+        })
       ),
       res,
-      "Failed to create group time"
-    );
-  }
-});
-
-app.delete("/group/time/:timeID", async (req, res) => {
-  const username = req.header("username");
-  const timeID = req.params.timeID;
-  // const time = req.body;
-  if (await checkIfUserExist(username, res)) {
-    handle(
-      db.groupTime.remove({ _id: timeID }, unm(username)),
-      res,
-      "Failed to remove group time"
+      '备份成功'
     );
   }
 });
